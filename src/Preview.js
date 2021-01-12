@@ -5,6 +5,7 @@ import {
   Crop,
   MusicNote,
   Note,
+  Send,
   TextFields,
   Timer,
 } from "@material-ui/icons";
@@ -12,7 +13,10 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useHistory } from "react-router-dom";
 import { resetCameraImage, selectcameraImage } from "./features/cameraSlice";
+import { v4 as uuid } from "uuid";
 import "./Preview.css";
+import { db, storage } from "./firebase";
+import firebase from "firebase";
 
 function Preview() {
   const cameraImage = useSelector(selectcameraImage);
@@ -30,6 +34,37 @@ function Preview() {
     history.replace("/");
   };
 
+  const sendPost = () => {
+    const id = uuid();
+    const uploadTask = storage
+      .ref(`posts/${id}`)
+      .putString(cameraImage, "data_url");
+
+    uploadTask.on(
+      "state_changed",
+      null,
+      (error) => {
+        alert(error);
+      },
+      () => {
+        //Complete function
+        storage
+          .ref("posts")
+          .child(id)
+          .getDownloadURL()
+          .then((url) => {
+            db.collection("posts").add({
+              imageUrl: url,
+              username: "Divij",
+              read: false,
+              timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            });
+            history.replace("/chats");
+          });
+      }
+    );
+  };
+
   return (
     <div className="preview">
       <Close className="preview__close" onClick={closePreview} />
@@ -43,6 +78,10 @@ function Preview() {
         <Timer />
       </div>
       <img src={cameraImage} alt="Photo" />
+      <div onClick={sendPost} className="preview__footer">
+        <h2>Send</h2>
+        <Send fontSize="small" className="preview__send" />
+      </div>
     </div>
   );
 }
